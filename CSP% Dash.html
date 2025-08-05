@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CSP5: STIC Control Layer</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: 'Courier New', monospace;
+    background: radial-gradient(circle, #000, #050505);
+    color: #00ffcc;
+    overflow: auto;
+    user-select: none;
+  }
+  body {
+    padding: 2rem 3rem 4rem 3rem;
+  }
+
+  .banner {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 8px;
+    background: #330000;
+    color: #ff4444;
+    font-weight: bold;
+    font-size: 0.85rem;
+    border-bottom: 2px solid #ff0000;
+    z-index: 9999;
+    text-align: center;
+    user-select: none;
+    transition: opacity 0.3s ease;
+  }
+
+  /* STARTUP */
+  #startupScreen {
+    position: fixed;
+    top: 40px;
+    left: 0;
+    width: 100vw;
+    height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle, #000, #050505);
+    color: #00ffcc;
+    user-select: none;
+    z-index: 20;
+  }
+  #startupText {
+    font-size: 1.3rem;
+    margin-top: 20px;
+    animation: blink 1.2s step-start infinite;
+  }
+  @keyframes blink {
+    50% { opacity: 0.4; }
+  }
+  .logo-container {
+    animation: spin 12s linear infinite;
+  }
+  .logo {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 2px solid #00ffcc;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* DASHBOARD styling */
+  #dashboardScreen {
+    display: none;
+    background: radial-gradient(circle, #000, #050505);
+    color: #00ccaa;
+    padding: 2rem 3rem;
+    max-width: 100vw;
+    max-height: calc(100vh - 40px);
+    margin: 40px 0 0 0;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    user-select: text;
+    box-sizing: border-box;
+  }
+
+  #circleCanvas {
+    display: block;
+    margin: 2rem auto 4rem auto;
+    max-width: 600px;
+    width: 90vw;
+    height: 600px;
+    border: 1px solid #00ffcc44;
+    border-radius: 8px;
+    opacity: 0.15;
+  }
+
+  /* CRASH SCREEN */
+  #crashScreen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+    z-index: 10000;
+    background: #330000ee;
+    color: #ff2222;
+    font-size: 2.5rem;
+    text-align: center;
+    animation: flicker 0.15s infinite alternate;
+    font-weight: 900;
+  }
+  #crashScreen strong {
+    margin-bottom: 1rem;
+    text-shadow:
+      0 0 10px #ff0000,
+      0 0 20px #ff4444,
+      0 0 30px #ff0000,
+      0 0 40px #ff4444;
+  }
+  @keyframes flicker {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; text-shadow: none; }
+    100% { opacity: 1; }
+  }
+
+  /* BLACK SCREEN */
+  #blackScreen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: black;
+    display: none;
+    z-index: 10001;
+  }
+
+  /* GLITCH CANVAS & OVERLAY */
+  #glitchCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: none;
+    z-index: 10002;
+  }
+  .overlay {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    font-family: monospace;
+    font-size: 1.2rem;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px 15px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px red;
+    z-index: 10003;
+    user-select: none;
+  }
+  .legal-warning {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.85rem;
+    color: #ff9999;
+    font-family: monospace;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 6px 12px;
+    border-radius: 5px;
+    z-index: 10003;
+    text-align: center;
+    max-width: 90vw;
+    user-select: none;
+  }
+  .ellipsis {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: monospace;
+    font-size: 3rem;
+    color: white;
+    z-index: 10002;
+    animation: blink 1.2s infinite;
+    user-select: none;
+  }
+
+  /* PASSWORD SCREEN */
+  #passwordScreen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #110000ee;
+    color: #00ffcc;
+    text-align: center;
+    padding: 2rem;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+    z-index: 10004;
+  }
+  #passwordScreen input {
+    background: #000;
+    border: 2px solid #00ffcc;
+    color: #00ffcc;
+    font-family: monospace;
+    font-size: 1.25rem;
+    padding: 0.5rem 1rem;
+    margin-top: 1rem;
+    outline: none;
+    width: 280px;
+    max-width: 90vw;
+  }
+  #passwordScreen button {
+    margin-top: 1rem;
+    font-size: 1rem;
+    padding: 0.5rem 1.5rem;
+    background: #00ffcc;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    color: #000;
+  }
+  #passwordScreen .message {
+    margin-top: 1rem;
+    font-size: 1rem;
+    color: #ff5555;
+    min-height: 1.2em;
+  }
+</style>
+</head>
+<body>
+
+  <div class="banner" id="banner">STIC CSP5 SECURE PROTOCOL CHANNEL – MONITORED UNDER CHAPSTIC AUTH</div>
+
+  <!-- STARTUP -->
+  <div id="startupScreen">
+    <div class="logo-container">
+      <img class="logo" src="https://d1fxy698ilbz6u.cloudfront.net/logo/f7857de38f6c96f855fe1c1b48a0df7679c5838c.png" alt="STIC Protocol Logo" />
+    </div>
+    <div id="startupText">Authenticating node CSP5-A...</div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <main id="dashboardScreen" tabindex="0" aria-label="CSP5 Intel Analysis Dossier" role="main" aria-live="polite" aria-atomic="true"></main>
+
+  <!-- CRASH SCREEN -->
+  <div id="crashScreen" role="alert" aria-live="assertive">
+    <strong>*** SYSTEM FAILURE ***</strong>
+    <div>Fatal error: CSP5 Control Layer unresponsive.</div>
+    <div>Initiating emergency shutdown...</div>
+    <div style="margin-top:2rem; font-size:1rem; color:#ff6666;">
+      ERROR CODE: 0xC5P5-FA1L<br />
+      STACK TRACE: [REDACTED]<br />
+      MEMORY DUMP: [DATA CORRUPTED]<br />
+    </div>
+  </div>
+
+  <!-- BLACK SCREEN -->
+  <div id="blackScreen"></div>
+
+  <!-- GLITCH CANVAS + OVERLAY -->
+  <canvas id="glitchCanvas"></canvas>
+  <div class="overlay">ACCESS DENIED: CSP5 CORRUPTION DETECTED</div>
+  <div class="ellipsis">. . .</div>
+  <div class="legal-warning">
+    ⚠️ UNAUTHORISED ACCESS TO CSP5 FILE DETECTED<br>
+    All actions are logged.<br>
+    Tampering with STIC Intelligence Protocol is a federal violation under GRICT Code 7701-B.<br>
+    Violators will be prosecuted to the full extent of squirrel law.<br>
+    Powered by Squirrel TEcH Internal Compliance Division.
+  </div>
+
+  <!-- PASSWORD SCREEN -->
+  <div id="passwordScreen" aria-live="polite" aria-atomic="true" role="dialog" aria-modal="true" aria-labelledby="passwordTitle" aria-describedby="passwordDesc">
+    <h2 id="passwordTitle">CSP5 Secure Access Required</h2>
+    <p id="passwordDesc">Enter password to regain access to CSP5 dossier:</p>
+    <input type="password" id="passwordInput" autocomplete="off" aria-label="Enter CSP5 password" />
+    <button id="passwordBtn">Enter</button>
+    <div class="message" id="passwordMessage"></div>
+  </div>
+
+<script>
+  // Classified dossier text
+  const classifiedDossierText = `
+CSP5: Comprehensive Classified Intelligence — Volume 1
+Codename: Operation Samhradh Dìomhair
+Operational Lead: Director [REDACTED]
+Security Clearance: Ultra-Delta-Prime (UDP-11)
+Primary Objective: Maximise rapport with Subject A through covert social engineering and product-driven engagement vectors.
+
+Section 1: Operational Overview & History
+Initial Phases:
+
+- Oak Shade: Early attempts at engagement, failed due to network miscoordination.
+
+- Phramite & Phrag 2.0: Successful rapport building leveraging shared interests in environmental tech and learning the subject’s game.
+
+Incidents:
+
+- Ashlyn Incident: Data breach event caused partial protocol abort; led to operational refinement.
+
+- Proxy Dye Dath: Intended as social disruption via dyed water bottle. Mishandled handoff led to spontaneous secondary deployment among peers.
+
+Section 2: Social Network Mapping & Metrics
+Node\tAlias\tInfluence Coefficient\tProximity Frequency\tEngagement Stability\tNotes
+A\t[REDACTED]\t1.00 (Primary Target)\tHigh\tFluctuating\tSubject of interest
+M\t[REDACTED]\t0.73\tMedium\tStable\tKey influencer, possible gatekeeper
+T\t[REDACTED]\t0.58\tLow\tVariable\tSecondary cluster member
+Z\t[REDACTED]\t0.44\tLow\tPeripheral\tMinimal direct contact
+
+Engagement Score (ES):
+ES = (Eye Contact * 0.4) + (Smile Frequency * 0.3) + (Gesture Rate * 0.3)
+Peak ES observed during one-on-one conversations within 1.2m proximity.
+
+Section 3: Behavioural & Cognitive Observations
+Microexpressions:
+Raised eyebrows during compliments or product mentions.
+
+Vocal Modulation:
+Slight pitch elevation when discussing scents like “rain” or “sandalwood.”
+
+Body Language:
+Increased hand gestures during tree-related talk; occasional mirroring behaviour.
+
+Section 4: Sensory Trigger Catalogue
+Trigger Phrase\tSensory Mode\tResponse Type\tTactical Use
+“Acorn Soap v8”\tOlfactory\tCuriosity & engagement\tPrimary icebreaker
+“Rain Scent”\tOlfactory\tRelaxation & openness\tSecondary cue for rapport
+“Tree Hydrant”\tVisual\tInterest spike\tProduct relevance booster
+“Quali-Cut”\tVerbal\tConfusion/questioning\tEducational engagement opportunity
+
+Section 5: Tactical Recommendations
+Timing: Engage between 13:00–14:30 for optimal attention.
+
+Environment: Prefer small group or one-on-one to reduce social saturation.
+
+Verbal Cues: Subtle insertion of “acorn” product updates, especially “Acorn Soap” and “Tree Hydrant.”
+
+Olfactory Stimuli: Consider sandalwood or light rain-scent fragrance to subconsciously link conversation topics.
+
+Visual Aids: Use “Nature Pen” or related tech devices as conversational props.
+
+Data Collection: Use SS-LCC to record proximity and engagement metrics for post-interaction analysis.
+
+Section 6: Tech Integration & Code Snippets
+\`\`\`python
+# Proximity engagement trigger
+def proximity_alert(distance_m):
+    if distance_m <= 1.2:
+        return "Engage: optimal range"
+    else:
+        return "Maintain observation"
+
+# Engagement scoring formula
+def engagement_score(eye_contact_sec, smiles, gestures):
+    score = (eye_contact_sec * 0.4) + (smiles * 0.3) + (gestures * 0.3)
+    return round(score, 2)
+
+# Example usage:
+distance = 1.1
+eye_contact = 2.5  # seconds
+smiles = 3
+gestures = 5
+print(proximity_alert(distance))
+print(f"Engagement Score: {engagement_score(eye_contact, smiles, gestures)}")
+\`\`\`
+
+Section 7: Secret Notes & Future Ops
+- Lightning Squirrel Hybrid Powertrain may offer covert transport options in upcoming ops.
+
+- Acorn Thread integration into communication tech underway for encrypted transmissions.
+
+- Watch Node M closely for anomalous activity.
+
+- Consider deploying Proxy Dye Dath 2.0 with controlled social disruption elements and planned handoffs.
+
+- Potential opportunity to introduce ‘Acorn Breeze’ as subtle social lubricant in casual settings.
+
+Section 8: Encrypted Psychological Profiles (Decoded Excerpt)
+Subject A: High openness, moderate introversion; exhibits trust primarily through shared values and subtle sensory cues.
+
+Node M: Possible double agent; stabilises social clusters but may divert attention.
+
+Group Dynamics: Larger gatherings cause drop in individual engagement; focus on selective interaction recommended.
+  `.trim();
+
+  // Elements references
+  const banner = document.getElementById('banner');
+  const startupScreen = document.getElementById('startupScreen');
+  const dashboardScreen = document.getElementById('dashboardScreen');
+  const crashScreen = document.getElementById('crashScreen');
+  const blackScreen = document.getElementById('blackScreen');
+  const glitchCanvas = document.getElementById('glitchCanvas');
+  const overlay = document.querySelector('.overlay');
+  const ellipsis = document.querySelector('.ellipsis');
+  const legalWarning = document.querySelector('.legal-warning');
+  const passwordScreen = document.getElementById('passwordScreen');
+  const passwordInput = document.getElementById('passwordInput');
+  const passwordBtn = document.getElementById('passwordBtn');
+  const passwordMessage = document.getElementById('passwordMessage');
+
+  // Add circle canvas dynamically for dashboard
+  const circleCanvas = document.createElement('canvas');
+  circleCanvas.id = 'circleCanvas';
+  circleCanvas.width = 600;
+  circleCanvas.height = 600;
+  circleCanvas.style.margin = '2rem auto 4rem auto';
+  circleCanvas.style.display = 'block';
+  circleCanvas.style.opacity = '0.15';
+  dashboardScreen.appendChild(circleCanvas);
+  const ctx = circleCanvas.getContext('2d');
+
+  // Circle graph constants
+  const nodeCount = 13;
+  const cx = circleCanvas.width / 2;
+  const cy = circleCanvas.height / 2;
+  const radius = 220;
+  let angleOffset = 0;
+
+  // Draw circle graph function
+  function drawCircleGraph() {
+    ctx.clearRect(0, 0, circleCanvas.width, circleCanvas.height);
+    const angleStep = (2 * Math.PI) / nodeCount;
+    const nodes = [];
+
+    for (let i = 0; i < nodeCount; i++) {
+      const angle = i * angleStep + angleOffset;
+      const x = cx + radius * Math.cos(angle);
+      const y = cy + radius * Math.sin(angle);
+      nodes.push({ x, y });
+    }
+
+    // Draw connections with skip-patterns 3 & 5
+    ctx.strokeStyle = '#00ffcc44';
+    ctx.lineWidth = 1;
+    nodes.forEach((start, i) => {
+      const end1 = nodes[(i + 3) % nodeCount];
+      const end2 = nodes[(i + 5) % nodeCount];
+
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end1.x, end1.y);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end2.x, end2.y);
+      ctx.stroke();
+    });
+
+    // Draw nodes as small circles
+    nodes.forEach(node => {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = '#00ffccaa';
+      ctx.fill();
+    });
+
+    angleOffset += 0.0035;
+    requestAnimationFrame(drawCircleGraph);
+  }
+
+  // Glitch canvas setup
+  function resizeGlitchCanvas() {
+    glitchCanvas.width = window.innerWidth;
+    glitchCanvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeGlitchCanvas);
+  resizeGlitchCanvas();
+
+  const glitchColors = [
+    "red", "green", "blue", "yellow", "magenta", "cyan", "black", "white",
+    "#FF5733", "#33FF57", "#5733FF", "#33FFF5", "#F5FF33", "#FF33F5"
+  ];
+
+  function drawGlitch() {
+    const pixelSize = 1;
+    const width = glitchCanvas.width;
+    const height = glitchCanvas.height;
+    const ctxGlitch = glitchCanvas.getContext('2d');
+
+    for (let y = 0; y < height; y += pixelSize) {
+      for (let x = 0; x < width; x += pixelSize) {
+        const color = glitchColors[Math.floor(Math.random() * glitchColors.length)];
+        ctxGlitch.fillStyle = color;
+        ctxGlitch.fillRect(x, y, pixelSize, pixelSize);
+      }
+    }
+  }
+
+  let glitchInterval = null;
+  function startGlitch() {
+    glitchCanvas.style.display = 'block';
+    overlay.style.display = 'block';
+    ellipsis.style.display = 'block';
+    legalWarning.style.display = 'block';
+    glitchInterval = setInterval(drawGlitch, 160);
+  }
+  function stopGlitch() {
+    glitchCanvas.style.display = 'none';
+    overlay.style.display = 'none';
+    ellipsis.style.display = 'none';
+    legalWarning.style.display = 'none';
+    if (glitchInterval) {
+      clearInterval(glitchInterval);
+      glitchInterval = null;
+    }
+  }
+
+  // Show/hide screens
+  function showStartup() {
+    banner.style.opacity = '1';
+    startupScreen.style.display = 'flex';
+    dashboardScreen.style.display = 'none';
+    crashScreen.style.display = 'none';
+    blackScreen.style.display = 'none';
+    stopGlitch();
+    passwordScreen.style.display = 'none';
+  }
+  function showDashboard() {
+    banner.style.opacity = '1';
+    startupScreen.style.display = 'none';
+    dashboardScreen.style.display = 'block';
+    crashScreen.style.display = 'none';
+    blackScreen.style.display = 'none';
+    stopGlitch();
+    passwordScreen.style.display = 'none';
+
+    dashboardScreen.textContent = classifiedDossierText;
+    drawCircleGraph();
+  }
+  function showCrash() {
+    banner.style.opacity = '0';
+    startupScreen.style.display = 'none';
+    dashboardScreen.style.display = 'none';
+    crashScreen.style.display = 'flex';
+    blackScreen.style.display = 'none';
+    stopGlitch();
+    passwordScreen.style.display = 'none';
+  }
+  function showBlack() {
+    banner.style.opacity = '0';
+    startupScreen.style.display = 'none';
+    dashboardScreen.style.display = 'none';
+    crashScreen.style.display = 'none';
+    blackScreen.style.display = 'block';
+    stopGlitch();
+    passwordScreen.style.display = 'none';
+  }
+  function showGlitch() {
+    banner.style.opacity = '0';
+    startupScreen.style.display = 'none';
+    dashboardScreen.style.display = 'none';
+    crashScreen.style.display = 'none';
+    blackScreen.style.display = 'none';
+    startGlitch();
+    passwordScreen.style.display = 'none';
+  }
+  function showPasswordScreen() {
+    banner.style.opacity = '0';
+    startupScreen.style.display = 'none';
+    dashboardScreen.style.display = 'none';
+    crashScreen.style.display = 'none';
+    blackScreen.style.display = 'none';
+    stopGlitch();
+    passwordScreen.style.display = 'flex';
+    passwordInput.value = '';
+    passwordMessage.textContent = '';
+    passwordInput.focus();
+  }
+
+  // Password logic
+  const correctPassword = 'Squirrel77';
+  let wrongAttempts = 0;
+  const maxWrongAttempts = 3;
+
+  passwordBtn.addEventListener('click', () => {
+    const val = passwordInput.value.trim();
+    if (val === correctPassword) {
+      passwordMessage.style.color = '#00ffcc';
+      passwordMessage.textContent = 'Access Granted. Rebooting...';
+      wrongAttempts = 0;
+      setTimeout(() => {
+        showStartup();
+        setTimeout(() => {
+          showDashboard();
+          startCrashTimer();
+        }, 4000);
+      }, 1500);
+    } else {
+      wrongAttempts++;
+      passwordMessage.style.color = '#ff5555';
+      if (wrongAttempts >= maxWrongAttempts) {
+        passwordMessage.textContent = 'Maximum attempts reached. Locking system.';
+        // Lock to glitch screen permanently
+        setTimeout(() => {
+          showGlitch();
+        }, 1500);
+      } else {
+        passwordMessage.textContent = `Access Denied. Incorrect password. Attempts left: ${maxWrongAttempts - wrongAttempts}`;
+        passwordInput.value = '';
+        passwordInput.focus();
+      }
+    }
+  });
+
+  passwordInput.addEventListener('keypress', e => {
+    if (e.key === 'Enter') passwordBtn.click();
+  });
+
+  // Crash timer handling (dashboard active for 15s)
+  let crashTimeout = null;
+  function startCrashTimer() {
+    if (crashTimeout) clearTimeout(crashTimeout);
+    crashTimeout = setTimeout(() => {
+      showCrash();
+      setTimeout(() => {
+        showBlack();
+        setTimeout(() => {
+          showGlitch();
+          setTimeout(() => {
+            showPasswordScreen();
+          }, 5000);
+        }, 3000);
+      }, 4000);
+    }, 15000);
+  }
+
+  // Initial launch sequence
+  showStartup();
+  setTimeout(() => {
+    showDashboard();
+    startCrashTimer();
+  }, 3000 + Math.random() * 4000);
+</script>
+</body>
+</html>
+
